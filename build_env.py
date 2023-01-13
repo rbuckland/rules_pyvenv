@@ -30,9 +30,13 @@ EnvFile = collections.namedtuple("EnvFile", ["path", "site_packages_path"])
 
 
 def console_script(env_path: pathlib.Path, module: str, func: str) -> str:
+
+    bin = gen_bin_scripts_dir(env_path)
+
+
     return textwrap.dedent(
         f"""\
-        #!{env_path / "bin/python3"}
+        #!{bin / "python3"}
         # -*- coding: utf-8 -*-
         import re
         import sys
@@ -162,14 +166,18 @@ def entry_points(path: List[str], **params) -> importlib_metadata.EntryPoints:
     )
     return importlib_metadata.EntryPoints(eps).select(**params)
 
-
-def generate_console_scripts(env_path: pathlib.Path) -> None:
-    site_packages = find_site_packages(env_path)
+def gen_bin_scripts_dir(env_path: pathlib.Path) -> pathlib.Path:
     bin = env_path / "bin"
     if not bin.exists:
         bin = env_path / "Scripts"
         if not bin.exists:
             raise Exception("Cannot find bin or Scripts")
+    return bin
+
+
+def generate_console_scripts(env_path: pathlib.Path) -> None:
+    site_packages = find_site_packages(env_path)
+    bin = gen_bin_scripts_dir(env_path)
 
     console_scripts = entry_points(path=[str(site_packages)], group="console_scripts")
     for ep in console_scripts:
@@ -188,17 +196,21 @@ def install_included_script(env_path: pathlib.Path, script_file: pathlib.Path) -
     # From pep-491:
     #   Python scripts must appear in scripts and begin with exactly b'#!python' in order to enjoy script wrapper
     #   generation and #!python rewriting at install time. They may have any or no extension.
+    bin = gen_bin_scripts_dir(env_path)
+
     if script_text.startswith(b"#!python"):
-        shebang = f'#!{env_path / "bin/python3"}'.encode("utf-8")
+        shebang = f"#!{bin}/python3".encode("utf-8")
         script_text = shebang + script_text[len(b"#!python") :]
 
-    script = env_path / "bin" / script_file.name
+    script = bin / script_file.name
     script.write_bytes(script_text)
     script.chmod(0o755)
 
 
 def run_additional_commands(env_path: pathlib.Path, commands: List[str]) -> None:
-    lines = [f". {env_path}/bin/activate"]
+    bin = gen_bin_scripts_dir(env_path)
+
+    lines = [f". {bin}/activate"]
     for cmd in commands:
         pip_cmd = f"pip --no-input {cmd}"
         # Echo in green what command is being run
