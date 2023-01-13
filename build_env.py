@@ -90,7 +90,7 @@ def find_site_packages(env_path: pathlib.Path) -> pathlib.Path:
     lib_path = env_path / "lib"
     if not lib_path.exists():
         lib_path = env_path / "Lib" # windows
-        if not lib_path.exists:
+        if not lib_path.exists():
             raise Exception("Cannot find lib or Lib")
 
     # Windows .venv folders do not have a "pythonX.X subdir in lib
@@ -168,9 +168,9 @@ def entry_points(path: List[str], **params) -> importlib_metadata.EntryPoints:
 
 def gen_bin_scripts_dir(env_path: pathlib.Path) -> pathlib.Path:
     bin = env_path / "bin"
-    if not bin.exists:
+    if not bin.exists():
         bin = env_path / "Scripts"
-        if not bin.exists:
+        if not bin.exists():
             raise Exception("Cannot find bin or Scripts")
     return bin
 
