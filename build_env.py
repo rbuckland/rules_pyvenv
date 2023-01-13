@@ -84,13 +84,15 @@ def is_external(file_: pathlib.Path) -> bool:
 
 def find_site_packages(env_path: pathlib.Path) -> pathlib.Path:
     lib_path = env_path / "lib"
+    if not lib_path.exists():
+        lib_path = env_path / "Lib" # windows
+        if not lib_path.exists:
+            raise Exception("Cannot find lib or Lib")
 
-    # We should find one "pythonX.X" directory in here.
-    for child in lib_path.iterdir():
-        if child.name.startswith("python"):
-            site_packages_path = child / "site-packages"
-            if site_packages_path.exists():
-                return site_packages_path
+    # Windows .venv folders do not have a "pythonX.X subdir in lib
+    # so just hunt for the "first" site-packages under lib || Scripts
+    for site_packages in lib_path.glob("**/site-packages"):
+        return site_packages
 
     raise Exception("Unable to find site-packages path in venv")
 
@@ -164,6 +166,10 @@ def entry_points(path: List[str], **params) -> importlib_metadata.EntryPoints:
 def generate_console_scripts(env_path: pathlib.Path) -> None:
     site_packages = find_site_packages(env_path)
     bin = env_path / "bin"
+    if not bin.exists:
+        bin = env_path / "Scripts"
+        if not bin.exists:
+            raise Exception("Cannot find bin or Scripts")
 
     console_scripts = entry_points(path=[str(site_packages)], group="console_scripts")
     for ep in console_scripts:
